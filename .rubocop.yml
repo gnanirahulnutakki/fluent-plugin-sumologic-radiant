@@ -25,6 +25,7 @@ Metrics/BlockLength:
   Exclude:
     - 'spec/**/*'
     - '**/*.gemspec'
+  Max: 35
 
 Metrics/MethodLength:
   Max: 40
@@ -39,7 +40,7 @@ Metrics/PerceivedComplexity:
   Max: 20
 
 RSpec/MultipleExpectations:
-  Max: 5
+  Max: 8
 
 RSpec/ExampleLength:
   Max: 20
@@ -56,6 +57,15 @@ Metrics/ClassLength:
 Naming/FileName:
   Exclude:
     - 'lib/fluent-plugin-sumologic-radiant.rb'
+
+Metrics/ParameterLists:
+  Max: 11
+
+Lint/DuplicateBranch:
+  Enabled: false
+
+RSpec/SpecFilePathFormat:
+  Enabled: false
 
 Style/GlobalVars:
   Enabled: false

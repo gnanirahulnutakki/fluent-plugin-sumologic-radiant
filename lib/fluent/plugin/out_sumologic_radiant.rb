@@ -63,7 +63,7 @@ module Fluent
         log_params = response_keys.filter_map do |key|
           "#{key}: #{response_map[key]}" if response_map.key?(key)
         end
-        @logger.warn "There was an issue sending data: #{log_params.join(', ')}" if log_params.any?
+        @logger.warn "There was an issue sending data: #{log_params.join(", ")}" if log_params.any?
       end
 
       private
@@ -247,10 +247,6 @@ module Fluent
         )
       end
 
-      def start
-        super
-      end
-
       def shutdown
         super
         @sumo_conn&.http&.shutdown
@@ -287,9 +283,9 @@ module Fluent
         Oj.dump(log_record)
       end
 
-      def format(tag, time, record)
+      def format(_tag, time, record)
         mstime = if time.respond_to?(:nsec)
-                   time.to_i * 1000 + (time.nsec / 1_000_000)
+                   (time.to_i * 1000) + (time.nsec / 1_000_000)
                  else
                    time.to_i * 1000
                  end
@@ -349,7 +345,7 @@ module Fluent
           log_format = sumo_metadata["log_format"] || @log_format
 
           # Strip any unwanted newlines
-          record[@log_key]&.chomp! if record[@log_key]&.respond_to?(:chomp!)
+          record[@log_key]&.chomp! if record[@log_key].respond_to?(:chomp!)
 
           log = case @data_type
                 when "logs"
