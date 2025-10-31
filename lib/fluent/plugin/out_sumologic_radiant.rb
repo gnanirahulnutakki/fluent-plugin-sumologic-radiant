@@ -140,7 +140,7 @@ module Fluent
     end
 
     # Main Sumologic output plugin
-    class SumologicRadiant < Output
+    class SumologicRadiantOutput < Output
       Fluent::Plugin.register_output("sumologic_radiant", self)
 
       helpers :compat_parameters
@@ -204,7 +204,12 @@ module Fluent
         compat_parameters_convert(conf, :buffer)
         super
 
-        unless @endpoint =~ URI::DEFAULT_PARSER.make_regexp
+        begin
+          uri = URI.parse(@endpoint)
+          unless uri.is_a?(URI::HTTP) || uri.is_a?(URI::HTTPS)
+            raise Fluent::ConfigError, "Invalid SumoLogic endpoint url: #{@endpoint}"
+          end
+        rescue URI::InvalidURIError
           raise Fluent::ConfigError, "Invalid SumoLogic endpoint url: #{@endpoint}"
         end
 

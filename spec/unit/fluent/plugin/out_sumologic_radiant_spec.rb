@@ -2,7 +2,7 @@
 
 require "spec_helper"
 
-RSpec.describe Fluent::Plugin::SumologicRadiant do
+RSpec.describe Fluent::Plugin::SumologicRadiantOutput do
   let(:driver) { Fluent::Test::Driver::Output.new(described_class) }
   let(:endpoint) { "https://collectors.sumologic.com/receiver/v1/http/test" }
 
@@ -137,17 +137,12 @@ RSpec.describe Fluent::Plugin::SumologicRadiant do
     end
 
     describe "#publish" do
-      let(:stub_request_obj) { instance_double(Net::HTTP::Post) }
-      let(:stub_http) { instance_double(Net::HTTP::Persistent) }
       let(:success_response) { Net::HTTPOK.new("1.1", "200", "OK") }
 
       before do
-        allow(Net::HTTP::Post).to receive(:new).and_return(stub_request_obj)
-        allow(stub_request_obj).to receive(:[]=)
-        allow(stub_request_obj).to receive(:body=)
-        allow(connection).to receive(:http).and_return(stub_http)
-        allow(stub_http).to receive(:request).and_return(success_response)
         allow(success_response).to receive(:body).and_return("")
+        stub_request(:post, endpoint)
+          .to_return(status: 200, body: "", headers: {})
       end
 
       it "publishes data successfully" do
@@ -166,9 +161,8 @@ RSpec.describe Fluent::Plugin::SumologicRadiant do
       end
 
       it "raises error on HTTP failure" do
-        error_response = Net::HTTPBadRequest.new("1.1", "400", "Bad Request")
-        allow(error_response).to receive(:body).and_return("Error message")
-        allow(stub_http).to receive(:request).and_return(error_response)
+        stub_request(:post, endpoint)
+          .to_return(status: 400, body: "Error message", headers: {})
 
         expect do
           connection.publish(
