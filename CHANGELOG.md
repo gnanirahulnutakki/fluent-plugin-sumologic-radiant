@@ -5,36 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-### Fixed
-- **Issue #85**: Added comprehensive warnings when `log_key` is missing for `text` format
-  - Startup warning for text/fields log formats
-  - Runtime warning showing available record keys
-  - Debug logging for dropped record tracking
-- **Issue #83**: Eliminated cookie handling warnings by replacing `httpclient` with `net-http-persistent`
-- **Issue #38**: Added custom SSL certificate support
-  - New `ca_file` parameter for custom CA certificates
-  - New `ca_path` parameter for CA certificate directories
-  - New `client_cert` and `client_key` parameters for mutual TLS
-
-### Added
-- Enhanced debug logging throughout the plugin
-  - Chunk processing statistics
-  - SSL configuration details
-  - Per-batch send tracking
-- Better error messages with actionable information
-- **Kubernetes metadata support** documentation and examples (addresses Issue #50)
-  - Guide for using modern Fluentd's `$.field.subfield` syntax
-  - Examples for accessing pod, namespace, and container metadata
-- **Buffer configuration** fully compatible with modern Fluentd standards (addresses Issue #84)
-- **Comprehensive example configurations**:
-  - Basic configuration
-  - Kubernetes logs with metadata
-  - Metrics (graphite, carbon2, prometheus)
-  - Custom SSL certificates
-  - Advanced production setup
-
 ## [0.1.0] - 2025-10-30
 
 ### Added
@@ -45,9 +15,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `net-http-persistent` 4.0+ (replaces `httpclient`)
   - `oj` 3.16+ for JSON parsing (replaces `yajl`)
 - Enhanced security with TLS 1.2+ enforcement
+- Custom SSL certificate support:
+  - `ca_file` parameter for custom CA certificates
+  - `ca_path` parameter for CA certificate directories
+  - `client_cert` and `client_key` parameters for mutual TLS
+- Enhanced debug logging throughout the plugin:
+  - Chunk processing statistics
+  - SSL configuration details
+  - Per-batch send tracking
+- Better error messages with actionable information
 - Comprehensive RSpec test suite
 - GitHub Actions CI pipeline for Ruby 3.0, 3.1, 3.2, and 3.3
 - RuboCop linting with modern Ruby style guidelines
+- Kubernetes metadata support documentation and examples
+- Comprehensive example configurations:
+  - Basic configuration
+  - Kubernetes logs with metadata
+  - Metrics (graphite, carbon2, prometheus)
+  - Custom SSL certificates
+  - Advanced production setup
 - SimpleCov for code coverage tracking
 
 ### Changed
@@ -62,6 +48,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dropped Ruby 2.x support
 - Removed dependency on `httpclient` (known security vulnerabilities)
 - Removed dependency on `yajl` (outdated, unmaintained)
+
+### Fixed
+- **Issue #85**: Added comprehensive warnings when `log_key` is missing for `text` format
+  - Startup warning for text/fields log formats
+  - Runtime warning showing available record keys
+  - Debug logging for dropped record tracking
+- **Issue #83**: Eliminated cookie handling warnings by replacing `httpclient` with `net-http-persistent`
+- **Issue #38**: Added custom SSL certificate support with `ca_file`, `ca_path`, `client_cert`, and `client_key` parameters
+- **Issue #50**: Kubernetes metadata support through modern Fluentd's `$.field.subfield` syntax
+- **Issue #84**: Buffer configuration fully compatible with modern Fluentd standards
+- **Issue #72**: Plugin properly recognized through correct registration structure
 
 ### Security
 - TLS 1.2+ required by default
