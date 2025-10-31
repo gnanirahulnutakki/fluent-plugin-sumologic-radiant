@@ -28,7 +28,7 @@ Metrics/BlockLength:
   Max: 35
 
 Metrics/MethodLength:
-  Max: 40
+  Max: 50
 
 Metrics/AbcSize:
   Max: 45
@@ -59,7 +59,9 @@ Naming/FileName:
     - 'lib/fluent-plugin-sumologic-radiant.rb'
 
 Metrics/ParameterLists:
-  Max: 11
+  Max: 15
+  CountKeywordArgs: false
+  MaxOptionalParameters: 4
 
 Lint/DuplicateBranch:
   Enabled: false

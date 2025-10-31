@@ -18,7 +18,8 @@ module Fluent
       COMPRESS_GZIP = "gzip"
 
       def initialize(endpoint, verify_ssl, connect_timeout, send_timeout, receive_timeout, proxy_uri,
-                     disable_cookies, sumo_client, compress_enabled, compress_encoding, logger)
+                     disable_cookies, sumo_client, compress_enabled, compress_encoding, logger,
+                     ca_file = nil, ca_path = nil, client_cert = nil, client_key = nil)
         @endpoint = URI.parse(endpoint)
         @sumo_client = sumo_client
         @logger = logger
@@ -29,7 +30,8 @@ module Fluent
           raise ArgumentError, "Invalid compression encoding #{@compress_encoding} must be gzip or deflate"
         end
 
-        create_http_client(verify_ssl, connect_timeout, send_timeout, receive_timeout, proxy_uri, disable_cookies)
+        create_http_client(verify_ssl, connect_timeout, send_timeout, receive_timeout, proxy_uri, disable_cookies,
+                           ca_file, ca_path, client_cert, client_key)
       end
 
       def publish(raw_data, source_host: nil, source_category: nil, source_name: nil, data_type: nil,
@@ -100,7 +102,8 @@ module Fluent
         headers
       end
 
-      def create_http_client(verify_ssl, connect_timeout, send_timeout, receive_timeout, proxy_uri, disable_cookies)
+      def create_http_client(verify_ssl, connect_timeout, send_timeout, receive_timeout, proxy_uri, disable_cookies,
+                             ca_file, ca_path, client_cert, client_key)
         @http = Net::HTTP::Persistent.new(name: "fluent_sumologic_radiant")
         @http.proxy = URI.parse(proxy_uri) if proxy_uri
         @http.open_timeout = connect_timeout
@@ -113,9 +116,30 @@ module Fluent
         @http.verify_mode = verify_ssl ? OpenSSL::SSL::VERIFY_PEER : OpenSSL::SSL::VERIFY_NONE
         @http.min_version = OpenSSL::SSL::TLS1_2_VERSION if verify_ssl
 
+        # Custom CA certificate configuration
+        if ca_file
+          @http.ca_file = ca_file
+          @logger.info "Using custom CA certificate file: #{ca_file}"
+        end
+
+        if ca_path
+          @http.ca_path = ca_path
+          @logger.info "Using custom CA certificate directory: #{ca_path}"
+        end
+
+        # Client certificate authentication (mutual TLS)
+        if client_cert && client_key
+          @http.certificate = OpenSSL::X509::Certificate.new(File.read(client_cert))
+          @http.private_key = OpenSSL::PKey::RSA.new(File.read(client_key))
+          @logger.info "Client certificate authentication enabled"
+        elsif client_cert || client_key
+          @logger.warn "Both client_cert and client_key must be specified for mutual TLS. " \
+                       "Ignoring incomplete configuration."
+        end
+
         # Cookie management - net-http-persistent doesn't have built-in cookie support
-        # This is handled differently than httpclient
-        @logger.info "Cookie handling is managed by Net::HTTP (no special configuration needed)" if disable_cookies
+        # This eliminates the "Unknown key" warnings that httpclient had
+        @logger.debug "Cookie handling is managed by Net::HTTP (no cookie warnings)" if disable_cookies
       end
 
       def compress(content)
@@ -169,6 +193,16 @@ module Fluent
       config_param :timestamp_key, :string, default: "timestamp"
       config_param :proxy_uri, :string, default: nil
       config_param :disable_cookies, :bool, default: false
+
+      # SSL/TLS configuration
+      desc "Path to CA certificate file for SSL verification"
+      config_param :ca_file, :string, default: nil
+      desc "Path to CA certificate directory for SSL verification"
+      config_param :ca_path, :string, default: nil
+      desc "Path to client certificate file for mutual TLS"
+      config_param :client_cert, :string, default: nil
+      desc "Path to client private key file for mutual TLS"
+      config_param :client_key, :string, default: nil
 
       config_param :use_internal_retry, :bool, default: false
       config_param :retry_timeout, :time, default: 72 * 3600 # 72h
@@ -232,6 +266,12 @@ module Fluent
         @custom_dimensions = validate_key_value_pairs(@custom_dimensions)
         log.debug "Custom dimensions: #{@custom_dimensions}" if @custom_dimensions
 
+        # Warn if log_format is text or fields but log_key might be problematic
+        if @data_type == LOGS_DATA_TYPE && (@log_format == "text" || @log_format == "fields")
+          log.warn "log_format is set to '#{@log_format}' which requires log_key='#{@log_key}' " \
+                   "to exist in your log records. If logs are not being sent, verify this field exists."
+        end
+
         @sumo_conn = SumologicConnection.new(
           @endpoint,
           @verify_ssl,
@@ -243,7 +283,11 @@ module Fluent
           @sumo_client,
           @compress,
           @compress_encoding,
-          log
+          log,
+          @ca_file,
+          @ca_path,
+          @client_cert,
+          @client_key
         )
       end
 
@@ -330,10 +374,16 @@ module Fluent
 
       def write(chunk)
         messages_list = {}
+        processed_count = 0
+        dropped_count = 0
+
+        log.debug { "Processing chunk #{chunk.dump_unique_id_hex(chunk.unique_id)} with #{chunk.size} bytes" }
 
         # Sort messages
         chunk.msgpack_each do |time, record|
           next unless record.is_a?(Hash)
+
+          processed_count += 1
 
           sumo_metadata = if @sumo_metadata_key && record.key?(@sumo_metadata_key)
                             record.fetch(@sumo_metadata_key, {})
@@ -354,13 +404,22 @@ module Fluent
                   log_to_str(record[@log_key])
                 end
 
-          next if log.nil?
+          if log.nil?
+            dropped_count += 1
+            next
+          end
 
           messages_list[key] ||= []
           messages_list[key].push(log)
         end
 
         chunk_id = "##{chunk.dump_unique_id_hex(chunk.unique_id)}"
+
+        log.debug do
+          "Chunk #{chunk_id}: processed #{processed_count} records, " \
+            "dropped #{dropped_count} records, sending #{messages_list.values.flatten.size} messages"
+        end
+
         send_messages(messages_list, chunk_id)
       end
 
@@ -370,7 +429,9 @@ module Fluent
         case log_format
         when "text"
           unless record.key?(@log_key)
-            log.warn "log key `#{@log_key}` has not been found in the log"
+            log.warn "log_format='text' requires log_key='#{@log_key}' but it was not found in record. " \
+                     "Record keys: #{record.keys.join(", ")}. This log will be dropped. " \
+                     "Please check your log_key configuration."
             return nil
           end
           log_to_str(record[@log_key])

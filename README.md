@@ -13,7 +13,9 @@ This is a fork of the original [fluent-plugin-sumologic_output](https://github.c
 - ✅ **Ruby 3.x support** (requires Ruby 3.0+)
 - ✅ **Modern dependencies** (Fluentd 1.16+, latest gems)
 - ✅ **Better performance** (using `oj` for JSON, `net-http-persistent` for connections)
-- ✅ **Enhanced security** (TLS 1.2+ by default, updated dependencies)
+- ✅ **Enhanced security** (TLS 1.2+ by default, custom SSL certificates, updated dependencies)
+- ✅ **Bug fixes** from original plugin (see [Fixed Issues](#fixed-issues-from-original-plugin) below)
+- ✅ **Enhanced debugging** with better error messages and logging
 - ✅ **Active maintenance** and vulnerability management
 - ✅ **Comprehensive test coverage**
 
@@ -181,6 +183,10 @@ metric_name{label1="value1"} value timestamp
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `verify_ssl` | bool | `true` | Verify SSL certificates |
+| `ca_file` | string | - | Path to CA certificate file for SSL verification |
+| `ca_path` | string | - | Path to CA certificate directory for SSL verification |
+| `client_cert` | string | - | Path to client certificate file for mutual TLS |
+| `client_key` | string | - | Path to client private key file for mutual TLS |
 
 ### Connection Settings
 
@@ -260,6 +266,40 @@ This plugin is designed as a **drop-in replacement** for the original `fluent-pl
 - **Ruby 2.x is no longer supported** - Ruby 3.0+ is required
 - **TLS 1.0/1.1 disabled by default** - TLS 1.2+ is enforced
 - **Dependency changes**: Uses `oj` instead of `yajl`, `net-http-persistent` instead of `httpclient`
+
+## Fixed Issues from Original Plugin
+
+This modernized version fixes several issues reported in the original plugin:
+
+### Issue #85: Missing log_key Warning
+**Problem**: When using `log_format=text` without the correct `log_key`, logs would silently stop being sent.
+
+**Fix**: Added comprehensive warnings at both startup and runtime:
+- Startup warning when `log_format` is set to `text` or `fields`
+- Runtime warning showing available record keys when `log_key` is missing
+- Enhanced debug logging to track processed vs. dropped records
+
+### Issue #83: Cookie Handling Warnings
+**Problem**: The original plugin using `httpclient` would spam logs with "Unknown key: MAX-AGE" and "Unknown key: SameSite" warnings.
+
+**Fix**: Replaced `httpclient` with `net-http-persistent`, which handles modern cookie attributes properly and eliminates these noisy warnings entirely.
+
+### Issue #38: Custom SSL Certificates
+**Problem**: No support for custom CA certificates or client certificate authentication.
+
+**Fix**: Added full SSL/TLS customization:
+- `ca_file` - Custom CA certificate file
+- `ca_path` - Custom CA certificate directory
+- `client_cert` / `client_key` - Mutual TLS support
+
+These options allow secure connections with internal PKI, self-signed certificates, or enterprise certificate requirements.
+
+### Enhanced Debugging
+Added detailed debug logging throughout the plugin:
+- Chunk processing statistics (processed, dropped, sent counts)
+- SSL configuration details
+- Connection initialization messages
+- Per-batch send tracking with retry information
 
 ## Log Formats
 

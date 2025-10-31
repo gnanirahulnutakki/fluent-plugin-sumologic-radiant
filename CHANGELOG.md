@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Issue #85**: Added comprehensive warnings when `log_key` is missing for `text` format
+  - Startup warning for text/fields log formats
+  - Runtime warning showing available record keys
+  - Debug logging for dropped record tracking
+- **Issue #83**: Eliminated cookie handling warnings by replacing `httpclient` with `net-http-persistent`
+- **Issue #38**: Added custom SSL certificate support
+  - New `ca_file` parameter for custom CA certificates
+  - New `ca_path` parameter for CA certificate directories
+  - New `client_cert` and `client_key` parameters for mutual TLS
+
+### Added
+- Enhanced debug logging throughout the plugin
+  - Chunk processing statistics
+  - SSL configuration details
+  - Per-batch send tracking
+- Better error messages with actionable information
+
 ## [0.1.0] - 2025-10-30
 
 ### Added
