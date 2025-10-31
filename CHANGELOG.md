@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - SSL configuration details
   - Per-batch send tracking
 - Better error messages with actionable information
+- **Kubernetes metadata support** documentation and examples (addresses Issue #50)
+  - Guide for using modern Fluentd's `$.field.subfield` syntax
+  - Examples for accessing pod, namespace, and container metadata
+- **Buffer configuration** fully compatible with modern Fluentd standards (addresses Issue #84)
+- **Comprehensive example configurations**:
+  - Basic configuration
+  - Kubernetes logs with metadata
+  - Metrics (graphite, carbon2, prometheus)
+  - Custom SSL certificates
+  - Advanced production setup
 
 ## [0.1.0] - 2025-10-30
 

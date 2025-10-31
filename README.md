@@ -51,6 +51,13 @@ td-agent-gem install fluent-plugin-sumologic-radiant
 
 The plugin is registered as `@type sumologic_radiant`.
 
+**📁 Example Configurations**: See the [`examples/`](examples/) directory for complete configuration examples:
+- [`basic.conf`](examples/basic.conf) - Simple configuration for getting started
+- [`kubernetes.conf`](examples/kubernetes.conf) - Kubernetes logs with metadata
+- [`metrics.conf`](examples/metrics.conf) - Metrics in various formats
+- [`ssl-custom-certs.conf`](examples/ssl-custom-certs.conf) - Custom SSL certificates
+- [`advanced.conf`](examples/advanced.conf) - Comprehensive production configuration
+
 ### Basic Configuration
 
 ```xml
@@ -232,6 +239,52 @@ Enable this feature by setting `sumo_metadata_key`:
   sumo_metadata_key _sumo_metadata
 </match>
 ```
+
+## Kubernetes Metadata Support
+
+**Note**: Issue #50 from the original plugin has been resolved in modern Fluentd versions.
+
+### Using Kubernetes Metadata with Buffer Keys
+
+The recommended approach for accessing Kubernetes metadata (e.g., namespace, pod name, container name) is to use Fluentd's buffer chunk keys with the `$`  accessor syntax:
+
+```xml
+<match kubernetes.**>
+  @type sumologic_radiant
+  endpoint https://collectors.sumologic.com/receiver/v1/http/XXXXX
+
+  # Use Kubernetes metadata in source fields
+  source_name ${$.kubernetes.container_name}
+  source_category ${$.kubernetes.namespace_name}/${$.kubernetes.pod_name}
+
+  # Configure buffer to enable placeholder extraction
+  <buffer $.kubernetes.namespace_name, $.kubernetes.pod_name, $.kubernetes.container_name>
+    @type memory
+    flush_interval 5s
+  </buffer>
+</match>
+```
+
+### Alternative: Using Custom Fields
+
+You can also include Kubernetes metadata as custom fields:
+
+```xml
+<match kubernetes.**>
+  @type sumologic_radiant
+  endpoint https://collectors.sumologic.com/receiver/v1/http/XXXXX
+
+  custom_fields namespace=${$.kubernetes.namespace_name},pod=${$.kubernetes.pod_name},container=${$.kubernetes.container_name}
+
+  <buffer $.kubernetes.namespace_name, $.kubernetes.pod_name, $.kubernetes.container_name>
+    @type memory
+  </buffer>
+</match>
+```
+
+### Why This Works
+
+Modern Fluentd (1.16+) supports extracting values from nested record fields using the `$.field.subfield` syntax when declared in buffer chunk keys. This replaces the deprecated `${record['field']}` pattern from older versions.
 
 ## Migration from fluent-plugin-sumologic_output
 
