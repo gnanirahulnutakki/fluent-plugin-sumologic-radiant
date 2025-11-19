@@ -165,7 +165,7 @@ module Fluent
 
     # Main Sumologic output plugin
     class SumologicRadiantOutput < Output
-      Fluent::Plugin.register_output("sumologic_radiant", self)
+      Fluent::Plugin.register_output("sumologic", self)
 
       helpers :compat_parameters
 
