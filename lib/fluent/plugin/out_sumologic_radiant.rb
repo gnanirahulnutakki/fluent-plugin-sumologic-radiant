@@ -313,17 +313,14 @@ module Fluent
         record
       end
 
-      # Strip sumo_metadata and dump to json
+      # Strip sumo_metadata and dump to JSON.
+      #
+      # NOTE: Unlike earlier versions, this method no longer attempts to JSON-parse
+      # the value of @log_key. This makes behavior closer to the original
+      # fluent-plugin-sumologic_output, where plain-text log lines are accepted
+      # without raising parsing errors when only `endpoint` is configured.
       def dump_log(log_record)
         log_record.delete("_sumo_metadata")
-        begin
-          if log_record.key?(@log_key)
-            hash = Oj.load(log_record[@log_key])
-            log_record[@log_key] = hash
-          end
-        rescue Oj::ParseError
-          # Keep original if parsing fails
-        end
         Oj.dump(log_record)
       end
 
